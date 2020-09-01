@@ -41,6 +41,19 @@
 
 #include <linux/miscdevice.h>
 
+#define FEATURE_CORE_RESET_NTF_CHECK
+
+#ifdef FEATURE_CORE_RESET_NTF_CHECK
+enum nfc_err_state {
+	STATE_NORMAL		= 0,
+	STATE_CORE_RESET	= 1,
+	STATE_ABNORMAL_POWER	= 2,
+};
+
+#define CORE_RESET_NTF_NO_CLOCK		0x00205FD100A0ULL
+#define CORE_RESET_NTF_CLOCK_LOST	0x0000000000A4ULL
+#endif
+
 #if !defined(CONFIG_NFC_FEATURE_SN100U)
 #define FEATURE_PN80T
 #else

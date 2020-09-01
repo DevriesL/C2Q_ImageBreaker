@@ -233,10 +233,12 @@ void debug_masterstats_show(char *annotation)
 		dsp_entry = &DSP_ENTRY[i];
 
 		if(dsp_entry->error_count > MAX_COUNT) {
+#ifdef CONFIG_DSP_SLEEP_RECOVERY_FOR_ADSP
 			if(dsp_entry->tm_chk.tm_hour >= START_H &&
 					dsp_entry->tm_chk.tm_hour < END_H &&
 					!(strncmp(dsp_entry->name, "adsp", 4)))
 				dsp_entry->ssr = &adsp_ssr;
+#endif
 
 			if (!strncmp(dsp_entry->name, "cdsp", 4))
 				dsp_entry->ssr = &cdsp_ssr;

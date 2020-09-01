@@ -10753,6 +10753,13 @@ dhd_optimised_preinit_ioctls(dhd_pub_t * dhd)
 	else
 		dhd->info->rxthread_enabled = TRUE;
 #endif
+
+#if defined(CUSTOM_COUNTRY_CODE_XZ)
+	/* Set initial country code to XZ */
+	strlcpy(dhd->dhd_cspec.country_abbrev, "XZ", WLC_CNTRY_BUF_SZ);
+	strlcpy(dhd->dhd_cspec.ccode, "XZ", WLC_CNTRY_BUF_SZ);
+	DHD_ERROR(("%s: Set initial country code to XZ(World Wide Safe)\n", __FUNCTION__));
+#endif /* CUSTOM_COUNTRY_CODE_XZ */
 	/* Set Country code  */
 	if (dhd->dhd_cspec.ccode[0] != 0) {
 		ret = dhd_iovar(dhd, 0, "country", (char *)&dhd->dhd_cspec, sizeof(wl_country_t),
@@ -11742,6 +11749,13 @@ dhd_legacy_preinit_ioctls(dhd_pub_t *dhd)
 	else
 		dhd->info->rxthread_enabled = TRUE;
 #endif
+
+#if defined(CUSTOM_COUNTRY_CODE_XZ)
+	/* Set initial country code to XZ */
+	strlcpy(dhd->dhd_cspec.country_abbrev, "XZ", WLC_CNTRY_BUF_SZ);
+	strlcpy(dhd->dhd_cspec.ccode, "XZ", WLC_CNTRY_BUF_SZ);
+	DHD_ERROR(("%s: Set initial country code to XZ(World Wide Safe)\n", __FUNCTION__));
+#endif /* CUSTOM_COUNTRY_CODE_XZ */
 	/* Set Country code  */
 	if (dhd->dhd_cspec.ccode[0] != 0) {
 		ret = dhd_iovar(dhd, 0, "country", (char *)&dhd->dhd_cspec, sizeof(wl_country_t),

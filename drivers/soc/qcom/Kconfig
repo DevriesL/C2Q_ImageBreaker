@@ -880,6 +880,12 @@ config DSP_SLEEP_RECOVERY
 	help
 	  Say 'Y' here to enable SSR when DSP(ADSP/CDSP) fail to enter sleep.
 
+config DSP_SLEEP_RECOVERY_FOR_ADSP
+	depends on DSP_SLEEP_RECOVERY
+	tristate "DSP_SLEEP_RECOVERY_FOR_ADSP"
+	help
+	  Say 'Y' here to enable SSR only for ADSP when ADSP fail to enter sleep.
+
 config DSP_SLEEP_DEBUG
 	tristate "DSP_SLEEP_DEBUG"
 	help

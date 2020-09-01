@@ -503,6 +503,7 @@ enum sec_battery_wpc_en_ctrl {
 	WPC_EN_CHARGING = 0x4,
 	WPC_EN_TX = 0x8,
 	WPC_EN_MST = 0x10,
+	WPC_EN_FW = 0x20,
 };
 
 enum sec_battery_direct_charging_source_ctrl {

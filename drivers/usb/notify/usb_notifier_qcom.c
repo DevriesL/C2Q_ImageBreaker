@@ -368,7 +368,7 @@ static int otg_accessory_power(bool enable)
 static int set_online(int event, int state)
 {
 	union power_supply_propval value;
-	struct power_supply *psy;
+	struct power_supply *psy, *psy_otg;
 
 	pr_info("set_online: %d, %d\n", event, state);
 
@@ -377,13 +377,24 @@ static int set_online(int event, int state)
 		pr_err("%s: fail to get battery power_supply\n", __func__);
 		return -1;
 	}
+	psy_otg = get_power_supply_by_name("otg");
+	if (!psy_otg) {
+		pr_err("%s: fail to get battery power_supply_otg\n", __func__);
+		return -1;
+	}
 
-	if (state)
-		value.intval = SEC_BATTERY_CABLE_SMART_OTG;
-	else
-		value.intval = SEC_BATTERY_CABLE_SMART_NOTG;
+	if (event == NOTIFY_EVENT_NREALAR_EXT_CURRENT) {
+		value.intval = state;
+		psy_otg->desc->set_property(psy_otg, POWER_SUPPLY_PROP_VOLTAGE_MAX, &value);
+	}
+	else {
+		if (state)
+			value.intval = SEC_BATTERY_CABLE_SMART_OTG;
+		else
+			value.intval = SEC_BATTERY_CABLE_SMART_NOTG;
 
-	psy->desc->set_property(psy, POWER_SUPPLY_PROP_ONLINE, &value);
+		psy->desc->set_property(psy, POWER_SUPPLY_PROP_ONLINE, &value);
+	}
 
 	return 0;
 }

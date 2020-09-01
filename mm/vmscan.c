@@ -2392,6 +2392,7 @@ enum mem_boost {
 	NO_BOOST,
 	BOOST_MID = 1,
 	BOOST_HIGH = 2,
+	BOOST_KILL = 3,
 };
 static int mem_boost_mode = NO_BOOST;
 static unsigned long last_mode_change;
@@ -2417,13 +2418,13 @@ static ssize_t mem_boost_mode_store(struct kobject *kobj,
 	int err;
 
 	err = kstrtoint(buf, 10, &mode);
-	if (err || mode > BOOST_HIGH || mode < NO_BOOST)
+	if (err || mode > BOOST_KILL || mode < NO_BOOST)
 		return -EINVAL;
 
 	mem_boost_mode = mode;
 	last_mode_change = jiffies;
 #ifdef CONFIG_ION_RBIN_HEAP
-	if (mem_boost_mode == BOOST_HIGH)
+	if (mem_boost_mode >= BOOST_HIGH)
 		wake_ion_rbin_heap_prereclaim();
 #endif
 	return count;
@@ -2567,6 +2568,7 @@ static inline bool need_memory_boosting(struct pglist_data *pgdat)
 		return false;
 
 	switch (mem_boost_mode) {
+	case BOOST_KILL:
 	case BOOST_HIGH:
 		ret = true;
 		break;

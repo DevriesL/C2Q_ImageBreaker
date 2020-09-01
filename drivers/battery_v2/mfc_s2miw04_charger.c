@@ -279,6 +279,24 @@ int mfc_reg_update(struct i2c_client *client, u16 reg, u8 val, u8 mask)
 }
 
 #if defined(CONFIG_WIRELESS_IC_PARAM)
+static int mfc_set_wireless_param(u8 chip_id, int fw_ver)
+{
+	u32 param_data = 0;
+	int ret = 0;
+
+	param_data = (chip_id & 0xFF) << 24;
+	param_data |= (fw_ver & 0xFFFF) << 8;
+	param_data |= (wireless_fw_mode_param & 0xF) << 4;
+
+	pr_info("%s: param data 0x%08X\n", __func__, param_data);
+	ret = sec_set_param(param_index_wireless_ic, &param_data);
+	if (!ret) {
+		pr_err("%s: sec_set_param failed\n", __func__);
+	}
+
+	return ret;
+}
+
 static int mfc_set_wireless_ic_param(struct mfc_charger_data *charger, u8 chip_id, int fw_ver)
 {
 	u32 param_data = 0;
@@ -553,7 +571,9 @@ static void mfc_set_wpc_en(struct mfc_charger_data *charger, char flag, char on)
 	else
 		charger->wpc_en_flag &= ~flag ;
 
-	if (!(charger->wpc_en_flag & WPC_EN_SYSFS) || !(charger->wpc_en_flag & WPC_EN_CCIC))
+	if (charger->wpc_en_flag & WPC_EN_FW)
+		enable = 1;
+	else if (!(charger->wpc_en_flag & WPC_EN_SYSFS) || !(charger->wpc_en_flag & WPC_EN_CCIC))
 		enable = 0;
 	else if (!(charger->wpc_en_flag & (WPC_EN_CHARGING | WPC_EN_MST | WPC_EN_TX)))
 		enable = 0;
@@ -1940,6 +1960,15 @@ static void mfc_wpc_fw_update_work(struct work_struct *work)
 #endif
 
 	pr_info("%s firmware update mode is = %d\n", __func__, charger->fw_cmd);
+
+	if (gpio_get_value(charger->pdata->wpc_en)) {
+		pr_info("%s: wpc_en disabled\n", __func__);
+		mfc_fw_update = false;
+		return;
+	}
+#if defined(CONFIG_DISABLE_MFC_IC)
+	mfc_set_wpc_en(charger, WPC_EN_FW, true); /* keep the wpc_en low during fw update */
+#endif
 	switch(charger->fw_cmd) {
 	case SEC_WIRELESS_RX_SPU_MODE:
 	case SEC_WIRELESS_RX_SDCARD_MODE:
@@ -1957,7 +1986,9 @@ static void mfc_wpc_fw_update_work(struct work_struct *work)
 		disable_irq(charger->pdata->irq_wpc_det);
 		if (charger->pdata->irq_wpc_pdrc)
 			disable_irq(charger->pdata->irq_wpc_pdrc);
-
+#if defined(CONFIG_WIRELESS_IC_PARAM)
+		mfc_set_wireless_param(MFC_CHIP_ID_S2MIW04, 0);
+#endif
 		ret = PgmOTPwRAM_LSI(charger, 0 ,fw_img, 0, fsize);
 
 		charger->pdata->otp_firmware_ver = mfc_get_firmware_version(charger, MFC_RX_FIRMWARE);
@@ -2011,6 +2042,9 @@ static void mfc_wpc_fw_update_work(struct work_struct *work)
 			goto fw_err;
 		}
 		__pm_stay_awake(&charger->wpc_update_lock);
+#if defined(CONFIG_WIRELESS_IC_PARAM)
+		mfc_set_wireless_param(MFC_CHIP_ID_S2MIW04, 0);
+#endif
 		pr_info("%s data size = %ld\n", __func__, charger->firm_data_bin->size);
 		ret = PgmOTPwRAM_LSI(charger, 0 ,charger->firm_data_bin->data, 0, charger->firm_data_bin->size);
 
@@ -2091,11 +2125,16 @@ static void mfc_wpc_fw_update_work(struct work_struct *work)
 		kfree(fw_img);
 		fw_img = NULL;
 	}
-
+#if defined(CONFIG_DISABLE_MFC_IC)
+	mfc_set_wpc_en(charger, WPC_EN_FW, false);
+#endif
 	return;
 fw_err:
 	mfc_uno_on(charger, false);
 	mfc_fw_update = false;
+#if defined(CONFIG_DISABLE_MFC_IC)
+	mfc_set_wpc_en(charger, WPC_EN_FW, false);
+#endif
 }
 
 static int mfc_s2miw04_chg_get_property(struct power_supply *psy,

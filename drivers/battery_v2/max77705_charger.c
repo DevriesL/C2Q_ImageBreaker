@@ -44,6 +44,7 @@ static enum power_supply_property max77705_charger_props[] = {
 
 static enum power_supply_property max77705_otg_props[] = {
 	POWER_SUPPLY_PROP_ONLINE,
+	POWER_SUPPLY_PROP_VOLTAGE_MAX,
 };
 
 static struct device_attribute max77705_charger_attrs[] = {
@@ -895,6 +896,12 @@ static int max77705_set_otg(struct max77705_charger_data *charger, int enable)
 	/* CHGIN-OTG */
 	value.intval = enable;
 	charger->otg_on = enable;
+	
+	/* otg current limit 900mA */
+	max77705_update_reg(charger->i2c, MAX77705_CHG_REG_CNFG_02,
+			MAX77705_OTG_ILIM_900 << CHG_CNFG_02_OTG_ILIM_SHIFT,
+			CHG_CNFG_02_OTG_ILIM_MASK);
+			
 	if (enable) {
 		psy_do_property("wireless", set,
 			POWER_SUPPLY_PROP_CHARGE_OTG_CONTROL, value);
@@ -2000,6 +2007,21 @@ static int max77705_otg_set_property(struct power_supply *psy,
 		} else {
 			pr_info("%s : max77705_set_otg skip, mfc_fw_update(%d)\n",
 				__func__, mfc_fw_update);
+		}
+		break;
+	case POWER_SUPPLY_PROP_VOLTAGE_MAX:
+		pr_info("POWER_SUPPLY_PROP_VOLTAGE_MAX - %s\n", (val->intval) ? "ON" : "OFF");
+
+		if (val->intval) {
+			/* otg current limit 1500mA */
+			max77705_update_reg(charger->i2c, MAX77705_CHG_REG_CNFG_02,
+					MAX77705_OTG_ILIM_1500 << CHG_CNFG_02_OTG_ILIM_SHIFT,
+					CHG_CNFG_02_OTG_ILIM_MASK);
+		} else {
+			/* otg current limit 900mA */
+			max77705_update_reg(charger->i2c, MAX77705_CHG_REG_CNFG_02,
+					MAX77705_OTG_ILIM_900 << CHG_CNFG_02_OTG_ILIM_SHIFT,
+					CHG_CNFG_02_OTG_ILIM_MASK);
 		}
 		break;
 	default:

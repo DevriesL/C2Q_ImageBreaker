@@ -376,6 +376,8 @@ static void ss_mafpc_enable(struct samsung_display_driver_data *vdd, int enable)
 			ss_send_cmd(vdd, TX_MAFPC_ON_FACTORY);
 		else
 			ss_send_cmd(vdd, TX_MAFPC_ON);
+		/* To update mAFPC brightness scale factor */
+		ss_brightness_dcs(vdd, USE_CURRENT_BL_LEVEL, BACKLIGHT_NORMAL);
 	} else
 		ss_send_cmd(vdd, TX_MAFPC_OFF);
 

@@ -2635,8 +2635,13 @@ static void max77705_uic_op_send_work_func(
 
 static void max77705_reset_ic(struct max77705_usbc_platform_data *usbc_data)
 {
-	max77705_write_reg(usbc_data->muic, 0x80, 0x0F);
+	struct max77705_dev *max77705 = usbc_data->max77705;
+
+	//gurantee to block i2c trasaction during ccic reset
+	mutex_lock(&max77705->i2c_lock);
+	max77705_write_reg_nolock(usbc_data->muic, 0x80, 0x0F);
 	msleep(100); /* need 100ms delay */
+	mutex_unlock(&max77705->i2c_lock);
 }
 
 void max77705_usbc_check_sysmsg(struct max77705_usbc_platform_data *usbc_data, u8 sysmsg)

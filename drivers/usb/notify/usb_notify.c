@@ -133,6 +133,7 @@ static int check_event_type(enum otg_notify_events event)
 	case NOTIFY_EVENT_SMSC_OVC:
 	case NOTIFY_EVENT_SMTD_EXT_CURRENT:
 	case NOTIFY_EVENT_MMD_EXT_CURRENT:
+	case NOTIFY_EVENT_NREALAR_EXT_CURRENT:
 	case NOTIFY_EVENT_DEVICE_CONNECT:
 	case NOTIFY_EVENT_GAMEPAD_CONNECT:
 	case NOTIFY_EVENT_LANHUB_CONNECT:
@@ -254,6 +255,8 @@ const char *event_string(enum otg_notify_events event)
 		return "smtd_ext_current";
 	case NOTIFY_EVENT_MMD_EXT_CURRENT:
 		return "mmd_ext_current";
+	case NOTIFY_EVENT_NREALAR_EXT_CURRENT:
+		return "nrealar_ext_current";
 	case NOTIFY_EVENT_DEVICE_CONNECT:
 		return "device_connect";
 	case NOTIFY_EVENT_GAMEPAD_CONNECT:
@@ -1610,6 +1613,11 @@ static void extra_notify_state(struct otg_notify *n,
 		if (n->set_battcall)
 			n->set_battcall
 				(NOTIFY_EVENT_MMD_EXT_CURRENT, enable);
+		break;
+	case NOTIFY_EVENT_NREALAR_EXT_CURRENT:
+		if (n->set_battcall)
+			n->set_battcall
+				(NOTIFY_EVENT_NREALAR_EXT_CURRENT, enable);
 		break;
 	case NOTIFY_EVENT_DEVICE_CONNECT:
 		if (!u_notify->is_device) {

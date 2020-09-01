@@ -746,6 +746,12 @@ static void SEC_ufs_utp_error_check(struct ufs_hba *hba, struct scsi_cmnd *cmd, 
 		} else if (tm_cmd == UFS_ABORT_TASK) {
 			if (utp_err->UTMR_abort_task_count < MAX_U8_VALUE)
 				utp_err->UTMR_abort_task_count++;
+#if defined(CONFIG_SEC_ABC)
+			if ((utp_err->UTMR_abort_task_count == 1) &&
+					(hba->dev_info.w_manufacturer_id == UFS_VENDOR_TOSHIBA)) {
+				sec_abc_send_event("MODULE=storage@ERROR=ufs_hwreset_err");
+			}
+#endif
 			utp_err->UTP_err++;
 		}
 	} else {
@@ -7445,7 +7451,8 @@ ufshcd_transfer_rsp_status(struct ufs_hba *hba, struct ufshcd_lrb *lrbp)
 			 * UFS device needs urgent BKOPs.
 			 */
 			if (!hba->pm_op_in_progress &&
-			    ufshcd_is_exception_event(lrbp->ucd_rsp_ptr)) {
+			    ufshcd_is_exception_event(lrbp->ucd_rsp_ptr) &&
+			    scsi_host_in_recovery(hba->host)) {
 				/*
 				 * Prevent suspend once eeh_work is scheduled
 				 * to avoid deadlock between ufshcd_suspend
@@ -11675,7 +11682,8 @@ disable_clks:
 	/*
 	 * Flush pending works before clock is disabled
 	 */
-	cancel_work_sync(&hba->eeh_work);
+	if (cancel_work_sync(&hba->eeh_work))
+		pm_runtime_put_noidle(hba->dev);
 
 	/*
 	 * Call vendor specific suspend callback. As these callbacks may access

@@ -6694,16 +6694,34 @@ static int sec_bat_set_property(struct power_supply *psy,
 
 				if (val->intval == USB_CURRENT_UNCONFIGURED) {
 					sec_bat_set_current_event(battery, SEC_BAT_CURRENT_EVENT_USB_100MA, SEC_BAT_CURRENT_EVENT_USB_STATE);
-				} else if (val->intval == USB_CURRENT_HIGH_SPEED) {
+				} else if ((val->intval == USB_CURRENT_HIGH_SPEED) || (val->intval == USB_CURRENT_SUPER_SPEED)) {
 					sec_bat_set_misc_event(battery, 0, BATT_MISC_EVENT_TIMEOUT_OPEN_TYPE);
-					sec_bat_set_current_event(battery, 0, SEC_BAT_CURRENT_EVENT_USB_STATE);
-					sec_bat_change_default_current(battery, SEC_BATTERY_CABLE_USB,
-							USB_CURRENT_HIGH_SPEED, USB_CURRENT_HIGH_SPEED);
-				} else if (val->intval == USB_CURRENT_SUPER_SPEED) {
-					sec_bat_set_misc_event(battery, 0, BATT_MISC_EVENT_TIMEOUT_OPEN_TYPE);
-					sec_bat_set_current_event(battery, SEC_BAT_CURRENT_EVENT_USB_SUPER, SEC_BAT_CURRENT_EVENT_USB_STATE);
-					sec_bat_change_default_current(battery, SEC_BATTERY_CABLE_USB,
-							USB_CURRENT_SUPER_SPEED, USB_CURRENT_SUPER_SPEED);
+					if (val->intval == USB_CURRENT_HIGH_SPEED) {
+						sec_bat_set_current_event(battery, 0, SEC_BAT_CURRENT_EVENT_USB_STATE);
+						sec_bat_change_default_current(battery, SEC_BATTERY_CABLE_USB,
+								USB_CURRENT_HIGH_SPEED, USB_CURRENT_HIGH_SPEED);
+					} else {
+						sec_bat_set_current_event(battery, SEC_BAT_CURRENT_EVENT_USB_SUPER, SEC_BAT_CURRENT_EVENT_USB_STATE);
+						sec_bat_change_default_current(battery, SEC_BATTERY_CABLE_USB,
+								USB_CURRENT_SUPER_SPEED, USB_CURRENT_SUPER_SPEED);
+					}
+
+					if (battery->pdic_info.sink_status.rp_currentlvl == RP_CURRENT_LEVEL3) {
+						if (battery->current_event & SEC_BAT_CURRENT_EVENT_HV_DISABLE) {
+							sec_bat_change_default_current(battery, SEC_BATTERY_CABLE_USB,
+									battery->pdata->default_input_current, battery->pdata->default_charging_current);
+						} else {
+							if(battery->store_mode)
+								sec_bat_change_default_current(battery, SEC_BATTERY_CABLE_USB,
+										battery->pdata->rp_current_rdu_rp3, battery->pdata->max_charging_current);
+							else
+								sec_bat_change_default_current(battery, SEC_BATTERY_CABLE_USB,
+										battery->pdata->rp_current_rp3, battery->pdata->max_charging_current);
+						}
+					} else if (battery->pdic_info.sink_status.rp_currentlvl == RP_CURRENT_LEVEL2) {
+						sec_bat_change_default_current(battery, SEC_BATTERY_CABLE_USB,
+								battery->pdata->rp_current_rp2, battery->pdata->rp_current_rp2);
+					}
 				} else if (val->intval == USB_CURRENT_SUSPENDED) {
 					sec_bat_set_misc_event(battery, 0, BATT_MISC_EVENT_TIMEOUT_OPEN_TYPE);
 					sec_bat_set_current_event(battery, SEC_BAT_CURRENT_EVENT_USB_SUSPENDED, SEC_BAT_CURRENT_EVENT_USB_STATE);

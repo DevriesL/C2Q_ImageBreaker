@@ -92,7 +92,7 @@ struct ss_vib {
 	unsigned int strength_od;
 	unsigned int strength_default;
 	unsigned int strength_high_temp;
-	unsigned int high_temperature;
+	int high_temperature;
 	struct vib_tuning tuning[MAX_FREQUENCY];
 	struct vib_packet haptic_eng[PACKET_MAX_SIZE];
 	void (*power_onoff)(struct ss_vib *vib, int onoff);
@@ -594,7 +594,7 @@ static int vibrator_parse_dt(struct ss_vib *vib)
 		rc = 0;
 	}
 
-	rc = of_property_read_u32(np, "samsung,high_temperature", &vib->high_temperature);
+	rc = of_property_read_s32(np, "samsung,high_temperature", &vib->high_temperature);
 	if (rc) {
 		pr_info("high temp strength not specified so use default strength\n");
 		vib->high_temperature = 550;

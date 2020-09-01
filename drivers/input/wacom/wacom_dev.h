@@ -461,6 +461,7 @@ struct wacom_i2c {
 
 	u16 fw_ver_ic;
 	u16 fw_ver_bin;
+	u16 fw_ver_spu;
 	int update_status;
 	u8 *fw_data;
 	u8 fw_update_way;

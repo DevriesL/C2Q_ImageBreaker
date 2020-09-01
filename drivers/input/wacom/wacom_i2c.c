@@ -1493,14 +1493,11 @@ static irqreturn_t wacom_interrupt_pdct(int irq, void *dev_id)
 	}
 #endif
 
-	mutex_lock(&wac_i2c->lock);
-
 	wac_i2c->pen_pdct = gpio_get_value(wac_i2c->pdata->pdct_gpio);
-
 	if (wac_i2c->pen_pdct)
-		sec_input_notify(&wac_i2c->nb, NOTIFIER_WACOM_PEN_INSERT, NULL);
+		wac_i2c->function_result &= ~EPEN_EVENT_PEN_OUT;
 	else
-		sec_input_notify(&wac_i2c->nb, NOTIFIER_WACOM_PEN_REMOVE, NULL);
+		wac_i2c->function_result |= EPEN_EVENT_PEN_OUT;
 
 	if (wac_i2c->pdata->use_garage) {
 #if WACOM_PRODUCT_SHIP
@@ -1511,10 +1508,6 @@ static irqreturn_t wacom_interrupt_pdct(int irq, void *dev_id)
 				__func__, wac_i2c->pen_pdct ? "IN" : "OUT of",
 				gpio_get_value(wac_i2c->pdata->irq_gpio));
 #endif
-		if (wac_i2c->pen_pdct)
-			wac_i2c->function_result &= ~EPEN_EVENT_PEN_OUT;
-		else
-			wac_i2c->function_result |= EPEN_EVENT_PEN_OUT;
 
 		/* in LPM, waiting blsp block resume */
 		if (wac_i2c->pm_suspend) {
@@ -1523,7 +1516,6 @@ static irqreturn_t wacom_interrupt_pdct(int irq, void *dev_id)
 			if (ret <= 0) {
 				input_err(true, &wac_i2c->client->dev,
 						"%s: LPM: pm resume is not handled [timeout]\n", __func__);
-				mutex_unlock(&wac_i2c->lock);
 				return IRQ_HANDLED;
 			}
 		}
@@ -1534,6 +1526,11 @@ static irqreturn_t wacom_interrupt_pdct(int irq, void *dev_id)
 
 		if (wac_i2c->function_result & EPEN_EVENT_PEN_OUT)
 			wac_i2c->pen_out_count++;
+
+		if (!mutex_trylock(&wac_i2c->lock)) {
+			input_err(true, &client->dev, "%s: mutex lock fail!\n", __func__);
+			goto irq_ret;
+		}
 
 		if (wac_i2c->epen_blocked ||
 				(wac_i2c->battery_saving_mode && !(wac_i2c->function_result & EPEN_EVENT_PEN_OUT))) {
@@ -1562,8 +1559,15 @@ static irqreturn_t wacom_interrupt_pdct(int irq, void *dev_id)
 					wac_i2c->screen_on ? "on" : "off",
 					wac_i2c->function_result & EPEN_EVENT_SURVEY ? "survey" : "normal");
 		}
+		mutex_unlock(&wac_i2c->lock);
+
 	}
-	mutex_unlock(&wac_i2c->lock);
+	
+irq_ret:
+	if (wac_i2c->pen_pdct)
+		sec_input_notify(&wac_i2c->nb, NOTIFIER_WACOM_PEN_INSERT, NULL);
+	else
+		sec_input_notify(&wac_i2c->nb, NOTIFIER_WACOM_PEN_REMOVE, NULL);
 
 	return IRQ_HANDLED;
 }
@@ -1962,6 +1966,9 @@ int wacom_i2c_load_fw(struct wacom_i2c *wac_i2c, u8 fw_update_way)
 #endif
 			wac_i2c->fw_ver_bin = fw_img->fw_ver1;
 			memcpy(wac_i2c->fw_chksum, fw_img->checksum, 5);
+		} else if (fw_update_way == FW_SPU) {
+			wac_i2c->fw_ver_spu = fw_img->fw_ver1;
+			memcpy(wac_i2c->fw_chksum, fw_img->checksum, 5);
 		}
 	} else {
 		input_err(true, &client->dev, "no hdr\n");
@@ -2033,8 +2040,12 @@ int wacom_fw_update_on_hidden_menu(struct wacom_i2c *wac_i2c, u8 fw_update_way)
 	wac_i2c->fw_update_way = fw_update_way;
 
 	/* firmware info */
-	input_info(true, &client->dev, "wacom ic fw ver : 0x%x, new fw ver : 0x%x\n",
-			wac_i2c->fw_ver_ic, wac_i2c->fw_ver_bin);
+	if (fw_update_way == FW_SPU)
+		input_info(true, &client->dev, "wacom ic fw ver : 0x%x, new fw ver : 0x%x\n",
+				wac_i2c->fw_ver_ic, wac_i2c->fw_ver_spu);
+	else
+		input_info(true, &client->dev, "wacom ic fw ver : 0x%x, new fw ver : 0x%x\n",
+				wac_i2c->fw_ver_ic, wac_i2c->fw_ver_bin);
 
 	// have to check it later
 	if (wac_i2c->fw_update_way == FW_BUILT_IN && wac_i2c->pdata->bringup == 1) {
@@ -2044,7 +2055,7 @@ int wacom_fw_update_on_hidden_menu(struct wacom_i2c *wac_i2c, u8 fw_update_way)
 	}
 
 	/* If FFU firmware version is lower than IC's version, do not run update routine */
-	if (fw_update_way == FW_SPU && fw_ver_ic >= wac_i2c->fw_ver_bin) {
+	if (fw_update_way == FW_SPU && fw_ver_ic >= wac_i2c->fw_ver_spu) {
 		input_info(true, &client->dev, "FFU. update is skipped\n");
 		wac_i2c->update_status = FW_UPDATE_PASS;
 

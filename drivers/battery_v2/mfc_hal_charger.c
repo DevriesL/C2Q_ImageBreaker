@@ -265,7 +265,7 @@ static int mfc_check_ic_info(struct mfc_charger_data *charger)
 	}
 
 	id = mfc_get_ic_id(charger);
-	if (id >= 0)
+	if (id == MFC_CHIP_ID_P9320 || id == MFC_CHIP_ID_S2MIW04)
 		mfc_chip_id_now = id;
 	else
 		mfc_chip_id_now = MFC_CHIP_ID_P9320; /* default is IDT */

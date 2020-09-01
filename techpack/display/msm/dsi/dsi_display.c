@@ -7161,6 +7161,42 @@ static void dsi_display_handle_lp_rx_timeout(struct work_struct *work)
 	u32 version = 0;
 
 	display = container_of(work, struct dsi_display, lp_rx_timeout_work);
+
+#if defined(CONFIG_DISPLAY_SAMSUNG)
+	if (display && display->panel &&
+	    (display->panel->panel_mode == DSI_OP_CMD_MODE) &&
+	    !atomic_read(&display->panel->esd_recovery_pending)) {
+		struct samsung_display_driver_data *vdd;
+		struct sde_connector *conn;
+
+		DSI_INFO("recovery display for cmd panel\n");
+
+		vdd = display->panel->panel_private;
+		if (!vdd) {
+			LCD_ERR("invalid vdd\n");
+			return;
+		}
+
+		conn = GET_SDE_CONNECTOR(vdd);
+		if (!conn) {
+			LCD_ERR("invalid conn\n");
+			return;
+		}
+
+		vdd->esd_recovery.esd_irq_enable(false, true, (void *)vdd);
+		vdd->panel_lpm.esd_recovery = true;
+		schedule_work(&conn->status_work.work);
+		vdd->panel_recovery_cnt++;
+
+		LCD_INFO("Panel Recovery, Trial Count = %d\n", vdd->panel_recovery_cnt);
+		SS_XLOG(vdd->panel_recovery_cnt);
+		inc_dpui_u32_field(DPUI_KEY_QCT_RCV_CNT, 1);
+
+		return;
+	}
+#endif
+
+
 	if (!display || !display->panel ||
 	    (display->panel->panel_mode != DSI_OP_VIDEO_MODE) ||
 	    atomic_read(&display->panel->esd_recovery_pending)) {

@@ -73,6 +73,9 @@ module_param_named(enable_cp_debug, enable_cp_debug, uint, 0644);
 static unsigned int dump_sink;
 module_param_named(dump_sink, dump_sink, uint, 0644);
 
+static unsigned int reboot_multicmd;
+module_param_named(reboot_multicmd, reboot_multicmd, uint, 0644);
+
 uint64_t get_pa_dump_sink(void)
 {
 	return virt_to_phys(&dump_sink);
@@ -180,7 +183,7 @@ static inline void __sec_debug_set_restart_reason(
 	__raw_writel((u32)__r, qcom_restart_reason);
 }
 
-static enum pon_restart_reason __pon_restart_pory_start(
+static enum pon_restart_reason __pon_restart_rory_start(
 				unsigned long opt_code)
 {
 	return (PON_RESTART_REASON_RORY_START | opt_code);
@@ -329,7 +332,7 @@ void sec_debug_update_restart_reason(const char *cmd, const int in_panic,
 			RESTART_REASON_NORMAL, NULL},
 		{ "sud",
 			PON_RESTART_REASON_UNKNOWN,
-			RESTART_REASON_NORMAL, __pon_restart_pory_start},
+			RESTART_REASON_NORMAL, __pon_restart_rory_start},
 		{ "debug",
 			PON_RESTART_REASON_UNKNOWN,
 			RESTART_REASON_NORMAL, __pon_restart_set_debug_level},
@@ -358,15 +361,21 @@ void sec_debug_update_restart_reason(const char *cmd, const int in_panic,
 			PON_RESTART_REASON_SECURE_CHECK_FAIL,
 			RESTART_REASON_NORMAL, NULL},
 #endif
+		{ "multicmd",
+			PON_RESTART_REASON_MULTICMD,
+			RESTART_REASON_NORMAL, NULL}
 	};
 	enum pon_restart_reason pon_rr = PON_RESTART_REASON_UNKNOWN;
 	enum sec_restart_reason_t sec_rr = RESTART_REASON_NORMAL;
-	char cmd_buf[128];
+	char cmd_buf[256];
 	size_t i;
 
 	if (!in_panic && restart_mode != RESTART_DLOAD)
 		pon_rr = PON_RESTART_REASON_NORMALBOOT;
 
+#ifndef CONFIG_SEC_LOG_STORE_LAST_KMSG
+__next_cmd:
+#endif
 	if (!cmd)
 		__pr_err("(%s) reboot cmd : NULL\n", __func__);
 	else if (!strlen(cmd))
@@ -392,13 +401,23 @@ void sec_debug_update_restart_reason(const char *cmd, const int in_panic,
 		if (strncmp(cmd, magic[i].cmd, len))
 			continue;
 
+#ifndef CONFIG_SEC_LOG_STORE_LAST_KMSG
+		if (magic[i].pon_rr == PON_RESTART_REASON_MULTICMD) {
+			cmd = cmd + len + 1;
+			goto __next_cmd;
+		}
+#endif
 		pon_rr = magic[i].pon_rr;
 		sec_rr = magic[i].sec_rr;
 
 		if (magic[i].func != NULL) {
 			unsigned long opt_code;
+			char *ptr = strstr(cmd_buf, ":");
 
-			if (!kstrtoul(cmd + len, 0, &opt_code))
+			if (ptr != NULL)
+				*ptr = '\0';
+
+			if (!kstrtoul(cmd_buf + len, 0, &opt_code))
 				pon_rr = magic[i].func(opt_code);
 		}
 
@@ -752,6 +771,14 @@ static int __init sec_debug_init(void)
 		break;
 	}
 
+#ifdef CONFIG_SEC_LOG_STORE_LAST_KMSG
+	if (reboot_multicmd)
+		reboot_multicmd = 1;
+	else
+		reboot_multicmd = 0;
+#else
+	reboot_multicmd = 0;
+#endif
 	return 0;
 }
 arch_initcall_sync(sec_debug_init);

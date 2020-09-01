@@ -463,13 +463,13 @@
 		/* Self idle-Display Operation (Enable/Disable) */
 		samsung,self_idle_aod_enter = [
 			29 00 00 00 00 00 03 FC 5A 5A	/* TEST KEY Enable */
-			29 00 00 00 00 00 05 76 13 1C 00 11
+			29 00 00 00 00 00 05 76 13 1F 00 11
 			29 00 00 00 00 00 03 FC A5 A5	/* TEST KEY Disable */
 		];
 
 		samsung,self_idle_aod_exit = [
 			29 00 00 00 00 00 03 FC 5A 5A	/* TEST KEY Enable */
-			29 00 00 00 00 00 05 76 13 1C 00 00
+			29 00 00 00 00 00 05 76 13 1F 00 00
 			29 00 00 00 00 00 02 75 01
 			29 00 00 00 00 00 03 FC A5 A5	/* TEST KEY Disable */
 		];
@@ -2910,6 +2910,8 @@
 			29 00 00 00 00 00 02 F7 0F		/* LTPS update */
 
 		];
+
+		samsung,rsc_4_frame_idle;
 
 		/* GFX HAL set max mdp performance mode before VRR change,
 		 * then set back to normal mode, even VRR work is done.

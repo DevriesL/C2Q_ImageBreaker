@@ -739,8 +739,8 @@ int ss_get_lfd_div(struct samsung_display_driver_data *vdd,
 		      min_div_scal = 4;
 		else if (mngr->scalability[scope] == LFD_FUNC_SCALABILITY4) /* TBD, div=5 */
 		      min_div_scal = 5;
-		else if (mngr->scalability[scope] == LFD_FUNC_SCALABILITY6) /* over 7400lux (HBM), div=120 */
-		      min_div_scal = 120;
+		else if (mngr->scalability[scope] == LFD_FUNC_SCALABILITY6) /* over 7400lux (HBM), LFD min 1hz */
+			min_div_scal = min_div_lowest;
 		else /* clear */
 			min_div_scal = min_div_clear;
 
@@ -4787,6 +4787,9 @@ static void ss_panel_parse_dt(struct samsung_display_driver_data *vdd)
 	rc = of_property_read_u32(np, "samsung,ccd_fail_val", tmp);
 	vdd->ccd_fail_val = (!rc ? tmp[0] : 0);
 	LCD_INFO("CCD fail value [%02x] \n", vdd->ccd_fail_val);
+
+	vdd->rsc_4_frame_idle = of_property_read_bool(np, "samsung,rsc_4_frame_idle");
+	LCD_INFO("rsc_4_frame_idle : %d\n", vdd->rsc_4_frame_idle);
 
 	/* VRR: Variable Refresh Rate */
 	vdd->vrr.support_vrr_based_bl = of_property_read_bool(np, "samsung,support_vrr_based_bl");
